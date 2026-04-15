@@ -82,6 +82,27 @@ struct RightBadge : RuntimeComponent<RightBadge, Element> {
 	mutable QPoint lastPoint;
 };
 
+struct TextAppearing : RuntimeComponent<TextAppearing, Element> {
+	std::vector<Ui::Text::LineLayoutInfo> lines;
+	int textWidth = 0;
+	int shownLine = 0;
+	int revealedLineWidth = 0;
+	int startLineWidth = 0;
+	int targetLineWidth = 0;
+	int shownWidth = 0;
+	int shownHeight = 0;
+	int targetHeight = 0;
+	crl::time widthDuration = 0;
+	Ui::Animations::Simple widthAnimation;
+	Ui::Animations::Simple heightAnimation;
+	bool geometryValid = false;
+	bool startedForText = false;
+	bool finalizing = false;
+	bool use = false;
+	mutable QImage lineCache;
+	mutable QImage gradientMask;
+};
+
 struct BottomRippleMask {
 	QImage image;
 	int shift = 0;
@@ -189,6 +210,7 @@ public:
 
 	QRect effectIconGeometry() const override;
 	QRect innerGeometry() const override;
+	QPoint mediaTopLeft() const override;
 	[[nodiscard]] BottomRippleMask bottomRippleMask(int buttonHeight) const;
 
 private:
@@ -349,6 +371,8 @@ private:
 	void refreshTopicButton();
 	void refreshInfoSkipBlock(HistoryItem *textItem);
 	[[nodiscard]] int monospaceMaxWidth() const;
+	[[nodiscard]] int bubbleTextWidth(int bubbleWidth) const;
+	[[nodiscard]] int bubbleTextualWidth() const;
 
 	void ensureSummarizeButton() const;
 	void paintSummarize(
@@ -368,6 +392,16 @@ private:
 	[[nodiscard]] ClickHandlerPtr createGoToCommentsLink() const;
 	[[nodiscard]] ClickHandlerPtr psaTooltipLink() const;
 	void psaTooltipToggled(bool shown) const;
+	void invalidateTextDependentCache() override;
+
+	bool textAppearValidate(not_null<TextAppearing*> appearing);
+	bool textAppearCheckLine(not_null<TextAppearing*> appearing);
+	void textAppearStartWidthAnimation(not_null<TextAppearing*> appearing);
+	void textAppearStartHeightAnimation(not_null<TextAppearing*> appearing);
+	void textAppearWidthCallback();
+	void textAppearHeightCallback();
+	[[nodiscard]] int textAppearTargetHeight(
+		not_null<TextAppearing*> appearing) const;
 
 	void refreshRightBadge();
 	[[nodiscard]] int rightBadgeWidth() const;
@@ -386,13 +420,18 @@ private:
 	mutable Ui::Text::String _fromName;
 	mutable std::unique_ptr<FromNameStatus> _fromNameStatus;
 	mutable std::unique_ptr<Ui::RoundCheckbox> _selectionRoundCheckbox;
-	mutable int _fromNameVersion = 0;
-	uint32 _bubbleWidthLimit : 27 = 0;
+	mutable uint32 _fromNameVersion : 16 = 0;
+	uint32 _nonTextMaxWidth : 16 = 0;
+	mutable int _bubbleTextualWidthMinimum : 16 = -1;
+	mutable int _bubbleTextualWidthCache : 16 = 0;
+	uint32 _bubbleWidthLimit : 26 = 0;
 	uint32 _invertMedia : 1 = 0;
 	uint32 _hideReply : 1 = 0;
 	uint32 _postShowingAuthor : 1 = 0;
+	mutable uint32 _fromLinkRipplePointSet : 1 = 0;
 
 	BottomInfo _bottomInfo;
+	mutable QPoint _lastMediaPosition;
 
 };
 
